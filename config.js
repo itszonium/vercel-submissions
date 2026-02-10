@@ -13,8 +13,9 @@ const firebaseConfig = {
 // For development/testing, you can use this demo config
 // But please set up your own Firebase project for production
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Get reference to the database
-const database = firebase.database();
+// Initialize Firebase only if it exists
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    // Get reference to the database
+    const database = firebase.database();
+}

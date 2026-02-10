@@ -20,6 +20,53 @@ const themeToggle = document.getElementById('themeToggle');
 let wordInputs = [];
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
+// Fallback to localStorage if Firebase CDN is not available
+if (typeof firebase === 'undefined') {
+    firebase = {
+        database: () => ({
+            ref: (path) => ({
+                set: async (data) => {
+                    const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
+                    const pathParts = path.split('/');
+                    if (pathParts[0] === 'submissions') {
+                        submissions[pathParts[1]] = data;
+                        localStorage.setItem('submissions', JSON.stringify(submissions));
+                    }
+                },
+                push: () => ({
+                    key: Date.now().toString()
+                }),
+                orderByChild: (field) => ({
+                    limitToLast: (limit) => ({
+                        once: async (event) => {
+                            const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
+                            return {
+                                exists: () => Object.keys(submissions).length > 0,
+                                forEach: (callback) => {
+                                    Object.entries(submissions).reverse().forEach(([key, val]) => {
+                                        callback({ val: () => val });
+                                    });
+                                }
+                            };
+                        }
+                    })
+                }),
+                once: async (event) => {
+                    const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
+                    return {
+                        exists: () => Object.keys(submissions).length > 0,
+                        forEach: (callback) => {
+                            Object.entries(submissions).reverse().forEach(([key, val]) => {
+                                callback({ val: () => val });
+                            });
+                        }
+                    };
+                }
+            })
+        })
+    };
+}
+
 // Initialize the application
 function init() {
     createWordInputs();
@@ -212,7 +259,8 @@ async function handleSubmit(e) {
         
     } catch (error) {
         console.error('Error submitting phrase:', error);
-        showValidationMessage('Error saving submission. Please try again.', 'error');
+        const errorMsg = error.message || 'Unknown error';
+        showValidationMessage(`Error: ${errorMsg}`, 'error');
         submitBtn.disabled = false;
     }
 }
