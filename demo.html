@@ -1,0 +1,406 @@
+<!-- 
+DEMO/TEST VERSION - Local Storage Backend
+Use this for testing without Firebase when you don't have credentials set up yet.
+This version stores data in browser's localStorage (not persistent after browser clear).
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12-Word Phrase Verifier - Demo (Local Storage)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .demo-notice {
+            background-color: #fef3c7;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        body.dark-mode .demo-notice {
+            background-color: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            color: #fcd34d;
+        }
+
+        .demo-notice strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+            <span class="theme-icon">🌙</span>
+        </button>
+
+        <div class="content-wrapper">
+            <!-- Input Section -->
+            <section class="input-section">
+                <div class="demo-notice">
+                    <strong>⚠️ Demo Mode (Local Storage)</strong>
+                    Data is stored locally in this browser only and will be cleared if you clear browser data.
+                    For production, use the main index.html with Firebase configuration.
+                </div>
+
+                <h1>Verify Your 12-Word Phrase</h1>
+                <p class="subtitle">Enter your recovery phrase words in order</p>
+
+                <form id="phraseForm">
+                    <!-- Discord Username Input -->
+                    <div class="discord-section">
+                        <label for="discordUsername">Discord Username *</label>
+                        <input
+                            type="text"
+                            id="discordUsername"
+                            placeholder="username#1234"
+                            required
+                            autocomplete="off"
+                        />
+                        <span class="error-message" id="discordError"></span>
+                    </div>
+
+                    <!-- Word Inputs Grid -->
+                    <div class="words-grid">
+                        <div id="wordsContainer"></div>
+                    </div>
+
+                    <!-- Validation Messages -->
+                    <div class="validation-message" id="validationMessage"></div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="submit-button" id="submitBtn">
+                        Verify Phrase
+                    </button>
+                </form>
+            </section>
+
+            <!-- Submissions List Section -->
+            <section class="submissions-section">
+                <h2>Verified Submissions</h2>
+                <p class="subtitle">Stored in this browser's local storage</p>
+
+                <button id="clearData" style="
+                    background: #ef4444;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                ">
+                    🗑️ Clear All Data
+                </button>
+
+                <div class="submissions-list" id="submissionsList">
+                    <div class="loading">No submissions yet. Test the form above!</div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // DEMO/TEST VERSION - Using Local Storage
+        // ============================================
+
+        const CORRECT_PHRASE = [
+            'steel', 'hamster', 'casual', 'nose', 'raise', 'right',
+            'various', 'cherry', 'trick', 'purse', 'bag', 'session'
+        ];
+
+        const NUM_WORDS = 12;
+        const STORAGE_KEY = 'wordVerifier_submissions';
+
+        // DOM Elements
+        const form = document.getElementById('phraseForm');
+        const wordsContainer = document.getElementById('wordsContainer');
+        const discordUsername = document.getElementById('discordUsername');
+        const discordError = document.getElementById('discordError');
+        const validationMessage = document.getElementById('validationMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const submissionsList = document.getElementById('submissionsList');
+        const themeToggle = document.getElementById('themeToggle');
+        const clearDataBtn = document.getElementById('clearData');
+
+        let wordInputs = [];
+        let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+        // Initialize
+        function init() {
+            createWordInputs();
+            setupEventListeners();
+            loadTheme();
+            loadSubmissions();
+        }
+
+        function createWordInputs() {
+            for (let i = 0; i < NUM_WORDS; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'word-input-wrapper';
+                
+                const label = document.createElement('label');
+                label.className = 'word-label';
+                label.textContent = `Word ${i + 1}`;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'word-input';
+                input.autocomplete = 'off';
+                input.dataset.index = i;
+                input.maxLength = '20';
+                
+                const icon = document.createElement('span');
+                icon.className = 'validation-icon';
+                
+                wrapper.appendChild(label);
+                wrapper.appendChild(input);
+                wrapper.appendChild(icon);
+                wordsContainer.appendChild(wrapper);
+                
+                wordInputs.push(input);
+                
+                input.addEventListener('input', () => {
+                    validateWord(input, i);
+                    clearValidationMessage();
+                });
+            }
+        }
+
+        function validateWord(input, index) {
+            const value = input.value.trim().toLowerCase();
+            const correctWord = CORRECT_PHRASE[index];
+            const icon = input.parentElement.querySelector('.validation-icon');
+            
+            input.classList.remove('correct', 'incorrect', 'empty');
+            icon.classList.remove('show');
+            
+            if (value === '') {
+                input.classList.add('empty');
+                icon.textContent = '';
+                icon.classList.add('show');
+            } else if (value === correctWord) {
+                input.classList.add('correct');
+                icon.textContent = '✅';
+                icon.classList.add('show');
+            } else {
+                input.classList.add('incorrect');
+                icon.textContent = '❌';
+                icon.classList.add('show');
+            }
+        }
+
+        function validatePhrase() {
+            let isValid = true;
+            let errorCount = 0;
+            
+            const discord = discordUsername.value.trim();
+            if (!discord) {
+                showDiscordError('Discord username is required');
+                isValid = false;
+            } else if (!isValidDiscordUsername(discord)) {
+                showDiscordError('Invalid Discord username format');
+                isValid = false;
+            } else {
+                clearDiscordError();
+            }
+            
+            wordInputs.forEach((input, index) => {
+                const value = input.value.trim().toLowerCase();
+                if (value !== CORRECT_PHRASE[index]) {
+                    isValid = false;
+                    errorCount++;
+                }
+            });
+            
+            return { isValid, errorCount, discord };
+        }
+
+        function isValidDiscordUsername(username) {
+            const discordRegex = /^[a-zA-Z0-9._-]{2,32}(#\d{4})?$/;
+            return discordRegex.test(username);
+        }
+
+        function showDiscordError(message) {
+            discordError.textContent = message;
+            discordError.classList.add('active');
+            discordUsername.classList.add('incorrect');
+        }
+
+        function clearDiscordError() {
+            discordError.textContent = '';
+            discordError.classList.remove('active');
+            discordUsername.classList.remove('incorrect');
+        }
+
+        function showValidationMessage(message, type) {
+            validationMessage.textContent = message;
+            validationMessage.className = `validation-message show ${type}`;
+        }
+
+        function clearValidationMessage() {
+            validationMessage.classList.remove('show');
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            const { isValid, errorCount, discord } = validatePhrase();
+            
+            if (!isValid) {
+                const message = discord ? 
+                    `${errorCount} word(s) incorrect. Please check and try again.` :
+                    'Please enter a Discord username and correct phrase.';
+                showValidationMessage(message, 'error');
+                return;
+            }
+            
+            showValidationMessage('✅ Phrase verified successfully!', 'success');
+            submitBtn.disabled = true;
+            
+            // Save to localStorage
+            const phrase = wordInputs.map(input => input.value.trim().toLowerCase()).join(' ');
+            const submission = {
+                discord: discord,
+                phrase: phrase,
+                timestamp: new Date().toISOString(),
+                verified: true
+            };
+            
+            const submissions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            submissions.push(submission);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(submissions));
+            
+            setTimeout(() => {
+                form.reset();
+                wordInputs.forEach(input => {
+                    input.classList.remove('correct', 'incorrect', 'empty');
+                    input.parentElement.querySelector('.validation-icon').classList.remove('show');
+                });
+                submitBtn.disabled = false;
+                clearValidationMessage();
+                loadSubmissions();
+            }, 2000);
+        }
+
+        function loadSubmissions() {
+            const submissions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            submissionsList.innerHTML = '';
+            
+            if (submissions.length === 0) {
+                submissionsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">No submissions yet. Try submitting the correct phrase!</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            submissions.reverse().forEach(submission => {
+                const item = createSubmissionItem(submission);
+                submissionsList.appendChild(item);
+            });
+        }
+
+        function createSubmissionItem(submission) {
+            const item = document.createElement('div');
+            item.className = 'submission-item';
+            
+            const timeAgo = formatTimeAgo(new Date(submission.timestamp));
+            const phraseWords = submission.phrase.split(' ').slice(0, 3).join(' ') + '...';
+            
+            item.innerHTML = `
+                <div class="submission-header">
+                    <div class="submission-username">
+                        🎮 ${escapeHtml(submission.discord)}
+                    </div>
+                    <div class="submission-status">✅ Verified</div>
+                    <div class="submission-time">${timeAgo}</div>
+                </div>
+                <div class="submission-phrase">
+                    ${escapeHtml(phraseWords)}
+                </div>
+            `;
+            
+            return item;
+        }
+
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function setupEventListeners() {
+            form.addEventListener('submit', handleSubmit);
+            themeToggle.addEventListener('click', toggleTheme);
+            clearDataBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to delete all submissions?')) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    loadSubmissions();
+                }
+            });
+            
+            discordUsername.addEventListener('blur', () => {
+                const discord = discordUsername.value.trim();
+                if (discord && !isValidDiscordUsername(discord)) {
+                    showDiscordError('Invalid format');
+                } else {
+                    clearDiscordError();
+                }
+            });
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            localStorage.setItem('darkMode', isDarkMode);
+            loadTheme();
+        }
+
+        function loadTheme() {
+            const icon = document.querySelector('.theme-icon');
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                icon.textContent = '☀️';
+            } else {
+                document.body.classList.remove('dark-mode');
+                icon.textContent = '🌙';
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
