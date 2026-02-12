@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Word Verifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            display: none;
+            text-align: center;
+        }
+
+        .login-container.show {
+            display: block;
+        }
+
+        .login-container h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .login-container input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-container button:hover {
+            background: #764ba2;
+        }
+
+        .error-message {
+            color: #ef4444;
+            margin-bottom: 20px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .admin-panel {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 1000px;
+            display: none;
+        }
+
+        .admin-panel.show {
+            display: block;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+
+        .admin-header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .submissions-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .leaderboard {
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .leaderboard-row {
+            display: flex;
+            align-items: center;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .leaderboard-row:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .leaderboard-row.winner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #fbbf24;
+            box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+        }
+
+        .leaderboard-row.second {
+            background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+            border-color: #9ca3af;
+        }
+
+        .leaderboard-row.third {
+            background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+            border-color: #fb923c;
+        }
+
+        .rank-badge {
+            font-size: 28px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .username-display {
+            flex: 1;
+            margin-left: 20px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .leaderboard-row.winner .username-display {
+            color: #92400e;
+            font-weight: bold;
+        }
+
+        .submission-time-small {
+            color: #6b7280;
+            font-size: 13px;
+            margin-left: 20px;
+            min-width: 180px;
+            text-align: right;
+        }
+
+        .submission-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .submission-card.winner {
+            border-color: #fbbf24;
+            background: #fffbeb;
+        }
+
+        .submission-card.winner::before {
+            content: "🥇 FIRST SUBMITTER";
+            display: block;
+            background: #fbbf24;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .submission-rank {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .submission-rank.medal {
+            color: #fbbf24;
+        }
+
+        .submission-username {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .submission-time {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .submission-phrase {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #e0e0e0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            transition: background 0.3s;
+        }
+
+        .back-link:hover {
+            background: #d0d0d0;
+        }
+
+        @media (max-width: 768px) {
+            .admin-panel {
+                padding: 20px;
+            }
+
+            .admin-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .stat-card .value {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container show" id="loginContainer">
+        <h1>🔐 Admin Access</h1>
+        <div class="error-message" id="errorMessage"></div>
+        <input 
+            type="password" 
+            id="adminPin" 
+            placeholder="Enter Admin PIN" 
+            autocomplete="off"
+        />
+        <button onclick="verifyPin()">Login</button>
+        <a href="index.html" class="back-link">← Back to App</a>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <h1>📊 Admin Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <h3>Total Submissions</h3>
+                <div class="value" id="totalSubmissions">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Unique Users</h3>
+                <div class="value" id="uniqueUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Valid Submissions</h3>
+                <div class="value" id="validSubmissions">0</div>
+            </div>
+        </div>
+
+        <h2 style="margin: 30px 0 20px 0; color: #333;">📊 Submission Leaderboard</h2>
+        
+        <div class="leaderboard" id="leaderboard">
+            <div class="loading">Loading submissions...</div>
+        </div>
+
+        <button class="logout-btn" onclick="logout()" style="margin-top: 20px; width: 100%;">Logout</button>
+        <a href="index.html" class="back-link">← Back to App</a>
+    </div>
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Admin PIN (change this to your desired PIN)
+        const ADMIN_PIN = '1234';
+
+        // Supabase credentials
+        const SUPABASE_URL = 'https://fxfarkkatekivolrgvad.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_J0jwybaGEAxeyP3gzaYNvQ_fxD5Q3Om';
+
+        let supabase = null;
+
+        // Initialize Supabase
+        function initSupabase() {
+            // Check if library is loaded
+            if (typeof window.supabase === 'undefined') {
+                console.warn('Supabase library not yet loaded');
+                return false;
+            }
+
+            // Check if already initialized
+            if (supabase) {
+                return true;
+            }
+
+            try {
+                console.log('Creating Supabase client...');
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('✅ Supabase client created successfully');
+                return true;
+            } catch (e) {
+                console.error('❌ Failed to create Supabase client:', e);
+                return false;
+            }
+        }
+
+        // Check if admin is already logged in
+        function checkLogin() {
+            const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+            if (isLoggedIn) {
+                document.getElementById('loginContainer').classList.remove('show');
+                document.getElementById('adminPanel').classList.add('show');
+                // Wait for Supabase to be initialized, then load
+                waitForSupabaseAndLoad();
+            }
+        }
+
+        // Wait for Supabase to initialize, then load submissions
+        function waitForSupabaseAndLoad() {
+            if (supabase) {
+                console.log('Supabase ready, loading submissions...');
+                loadSubmissions();
+            } else {
+                console.log('Waiting for Supabase...');
+                setTimeout(waitForSupabaseAndLoad, 100);
+            }
+        }
+
+        // Verify PIN
+        function verifyPin() {
+            const pin = document.getElementById('adminPin').value;
+            const errorMsg = document.getElementById('errorMessage');
+
+            if (pin === ADMIN_PIN) {
+                sessionStorage.setItem('adminLoggedIn', 'true');
+                document.getElementById('loginContainer').classList.remove('show');
+                document.getElementById('adminPanel').classList.add('show');
+                document.getElementById('adminPin').value = '';
+                errorMsg.textContent = '';
+                // Wait for Supabase and load
+                waitForSupabaseAndLoad();
+            } else {
+                errorMsg.textContent = '❌ Incorrect PIN';
+                document.getElementById('adminPin').value = '';
+            }
+        }
+
+        // Logout
+        function logout() {
+            sessionStorage.removeItem('adminLoggedIn');
+            document.getElementById('adminPin').value = '';
+            document.getElementById('errorMessage').textContent = '';
+            document.getElementById('loginContainer').classList.add('show');
+            document.getElementById('adminPanel').classList.remove('show');
+        }
+
+        // Load all submissions
+        async function loadSubmissions() {
+            const leaderboard = document.getElementById('leaderboard');
+            
+            if (!supabase) {
+                console.error('❌ Supabase not initialized');
+                leaderboard.innerHTML = 
+                    '<div class="loading">❌ Database connection failed. Please refresh page.</div>';
+                return;
+            }
+
+            try {
+                console.log('🔄 Loading submissions from Supabase...');
+                leaderboard.innerHTML = '<div class="loading">⏳ Loading submissions...</div>';
+                
+                // Get all submissions
+                const { data: submissions, error, status } = await supabase
+                    .from('submissions')
+                    .select('*')
+                    .order('submitted_at', { ascending: true });
+
+                console.log('Response status:', status);
+                
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw error;
+                }
+
+                console.log('✅ Received submissions:', submissions?.length || 0);
+
+                // Calculate stats
+                const totalSubmissions = submissions?.length || 0;
+                const uniqueUsers = new Set(submissions?.map(s => s.discord_username) || []).size;
+                const validSubmissions = submissions?.filter(s => s.is_valid).length || 0;
+
+                // Update stats
+                document.getElementById('totalSubmissions').textContent = totalSubmissions;
+                document.getElementById('uniqueUsers').textContent = uniqueUsers;
+                document.getElementById('validSubmissions').textContent = validSubmissions;
+
+                // Render leaderboard
+                leaderboard.innerHTML = '';
+
+                if (!submissions || submissions.length === 0) {
+                    console.log('No submissions found');
+                    leaderboard.innerHTML = '<div class="loading">📭 No submissions yet</div>';
+                    return;
+                }
+
+                console.log('Rendering', submissions.length, 'submissions');
+
+                submissions.forEach((submission, index) => {
+                    const rank = index + 1;
+                    const isWinner = rank === 1;
+                    const isSecond = rank === 2;
+                    const isThird = rank === 3;
+                    
+                    const date = new Date(submission.submitted_at);
+                    const timeStr = date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    let medal = '';
+                    if (rank === 1) medal = '🥇';
+                    else if (rank === 2) medal = '🥈';
+                    else if (rank === 3) medal = '🥉';
+
+                    const row = document.createElement('div');
+                    let rowClass = 'leaderboard-row';
+                    if (isWinner) rowClass += ' winner';
+                    else if (isSecond) rowClass += ' second';
+                    else if (isThird) rowClass += ' third';
+                    
+                    row.className = rowClass;
+                    row.innerHTML = `
+                        <div class="rank-badge">${medal || '#' + rank}</div>
+                        <div class="username-display">${escapeHtml(submission.discord_username)}</div>
+                        <div class="submission-time-small">${timeStr}</div>
+                    `;
+                    leaderboard.appendChild(row);
+                });
+                
+                console.log('✅ Leaderboard rendered successfully');
+
+            } catch (error) {
+                console.error('❌ Error loading submissions:', error);
+                leaderboard.innerHTML = 
+                    '<div class="loading">❌ Error: ' + (error.message || 'Unknown error') + '</div>';
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Allow Enter key to submit PIN
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && document.getElementById('adminPin').value) {
+                verifyPin();
+            }
+        });
+
+        // More aggressive initialization sequence
+        function tryInitialize() {
+            console.log('📍 Trying to initialize Supabase...');
+            if (initSupabase()) {
+                console.log('✅ Supabase initialized successfully');
+                checkLogin();
+            } else {
+                console.log('⏳ Supabase library not ready yet, retrying...');
+                setTimeout(tryInitialize, 100);
+            }
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', tryInitialize);
+        } else {
+            // Page already loaded
+            tryInitialize();
+        }
+
+        // Also try on window load event
+        window.addEventListener('load', tryInitialize);
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "buildCommand": "",
+  "installCommand": "",
+  "outputDirectory": ".",
+  "framework": "static",
+  "env": [
+    {
+      "key": "VITE_SUPABASE_URL",
+      "description": "Supabase project URL (from Settings > API)",
+      "type": "string",
+      "example": "https://your-project-id.supabase.co"
+    },
+    {
+      "key": "VITE_SUPABASE_ANON_KEY",
+      "description": "Supabase anonymous public key",
+      "type": "string",
+      "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+  ],
+  "public": [
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_ANON_KEY"
+  ]
+}

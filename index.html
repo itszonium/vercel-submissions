@@ -12,6 +12,8 @@
             <span class="theme-icon">🌙</span>
         </button>
 
+        <a href="admin.html" class="admin-link" title="Admin Panel (PIN: 1234)">⚙️</a>
+
         <div class="content-wrapper">
             <!-- Input Section -->
             <section class="input-section">
@@ -49,8 +51,8 @@
 
             <!-- Submissions List Section -->
             <section class="submissions-section">
-                <h2>Verified Submissions</h2>
-                <p class="subtitle">Public ledger of verified phrases</p>
+                <h2>Live Submission Wall</h2>
+                <p class="subtitle">Real-time public ledger (updates every 3 seconds)</p>
 
                 <div class="submissions-list" id="submissionsList">
                     <div class="loading">Loading submissions...</div>
@@ -59,9 +61,8 @@
         </div>
     </div>
 
-    <!-- Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
 </body>

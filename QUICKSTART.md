@@ -1,53 +1,210 @@
-# Quick Start Guide
+# QUICKSTART - Get Running in 5 Minutes
 
-## Fastest Way to Get Running (5 minutes)
+**Fast track to a working system. Detailed setup in [SUPABASE-SETUP.md](SUPABASE-SETUP.md)**
 
-### Prerequisites
-- Any modern web browser
-- Firebase account (free tier)
+---
 
-### Steps
+## ⚡ 5-Minute Setup
 
-#### 1. Create Firebase Project (2 min)
+### 1. Create Supabase Project (2 min)
 ```
-1. Visit https://console.firebase.google.com/
-2. Click "Add Project"
-3. Name: "word-verifier"
-4. Click "Create Project"
-5. Wait for initialization
-```
-
-#### 2. Setup Realtime Database (1 min)
-```
-1. Click "Realtime Database" in left menu
-2. Click "Create Database"
-3. Choose region closest to you
-4. Start in "Test Mode"
-5. Click "Enable"
+1. Go to https://app.supabase.com
+2. New Project → Name: "word-verifier" → Create
+3. Wait for database (2-3 min)
+4. Settings → API → Copy:
+   - Project URL
+   - Anon Key
 ```
 
-#### 3. Get Firebase Config (1 min)
-```
-1. Click Project Settings (⚙️ icon, top right)
-2. Scroll to "Your apps"
-3. Click Web icon (</>)
-4. Copy the entire firebaseConfig object
+### 2. Create Database Table (1 min)
+
+Go to **SQL Editor** and paste:
+
+```sql
+CREATE TABLE submissions (
+  id BIGSERIAL PRIMARY KEY,
+  discord_username TEXT NOT NULL,
+  phrase TEXT NOT NULL,
+  is_valid BOOLEAN DEFAULT true,
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_submissions_timestamp ON submissions(submitted_at);
+CREATE INDEX idx_submissions_valid ON submissions(is_valid);
+
+ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read" ON submissions FOR SELECT USING (true);
+CREATE POLICY "Allow public insert" ON submissions FOR INSERT WITH CHECK (true);
 ```
 
-#### 4. Update config.js (1 min)
-```
-1. Open config.js in text editor
-2. Replace YOUR_API_KEY, etc with values from step 3
-3. Save file
-```
+Then click **Run**.
 
-#### 5. Test Locally (Optional)
+### 3. Configure App (1 min)
+
+Create `.env.local` file in project root:
+```
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```### 4. Run Locally (1 min)
+
 ```bash
-# Python 3
+# Python (built-in)
 python -m http.server 8000
 
-# Node.js
+# OR Node.js
 npx http-server
+
+# OR VS Code Live Server extension
+# (Right-click index.html → Open with Live Server)
+```
+
+Open: **http://localhost:8000**
+
+Test:
+- Username: `test#0001`
+- Phrase: `steel hamster casual nose raise right various cherry trick purse bag session`
+- Click "Verify Phrase"
+- Check "Live Submission Wall"
+
+---
+
+## 🚀 Deploy to Vercel (Optional)
+
+```bash
+# 1. Push to GitHub
+git add .
+git commit -m "12-word verifier"
+git push
+
+# 2. Go to Vercel → New Project → Import GitHub repo
+# 3. Settings → Environment Variables:
+#    VITE_SUPABASE_URL=...
+#    VITE_SUPABASE_ANON_KEY=...
+# 4. Deploy button → Done!
+```
+
+Your URL: `https://your-project.vercel.app`
+
+---
+
+## 📚 Key Files
+
+| File | Purpose |
+|------|---------|
+| `index.html` | Main form & live wall |
+| `app.js` | All form logic, validation, real-time updates |
+| `config.js` | Supabase initialization |
+| `.env.local` | Your API credentials (keep secret!) |
+
+---
+
+## 🎯 What's Included
+
+✅ **Frontend**
+- 12 word input boxes
+- Real-time validation (green ✅ / red ❌)
+- Live submission wall (updates every 3 seconds)
+- Dark mode
+- Mobile responsive
+
+✅ **Backend**
+- Supabase PostgreSQL database
+- Row-level security
+- Automatic timestamps
+- Accurate ranking
+
+✅ **Features**
+- Prevents duplicate submissions
+- Shows "time ago" (just now, 5m ago, etc.)
+- Medals for top 3: 🥇 🥈 🥉
+- Discord username validation
+- XSS protection
+
+---
+
+## 🔧 Customize
+
+### Change the Phrase Words
+
+Edit in `app.js`:
+```javascript
+const CORRECT_PHRASE = [
+    'word1', 'word2', 'word3', 'word4', 'word5', 'word6',
+    'word7', 'word8', 'word9', 'word10', 'word11', 'word12'
+];
+```
+
+### Change Refresh Rate
+
+In `app.js`, change interval (default 3000 = 3 seconds):
+```javascript
+setInterval(loadSubmissions, 5000); // 5 seconds
+```
+
+### Change Styling
+
+Edit `styles.css` (variables at top):
+```css
+:root {
+    --primary-color: #3b82f6;
+    --success-color: #10b981;
+    --error-color: #ef4444;
+}
+```
+
+---
+
+## ❓ Troubleshooting
+
+### "Cannot read property 'createClient'" or undefined error
+- Check `.env.local` exists and has correct values
+- Clear cache: Ctrl+Shift+Delete (hard refresh)
+- Check browser console (F12) for errors
+
+### Submissions not appearing
+- Verify table exists in Supabase dashboard
+- Check RLS policies are enabled
+- Try refreshing page
+- Check network tab (F12) for API errors
+
+### "Invalid Discord username"
+- Format: `username` or `username#1234`
+- Minimum 2 characters
+- Only letters, numbers, dots, dashes, underscores
+
+---
+
+## 📖 Full Documentation
+
+- **[SUPABASE-SETUP.md](SUPABASE-SETUP.md)** - Complete setup guide
+- **[API-EXAMPLES.md](API-EXAMPLES.md)** - Code examples
+- **[DATABASE-SCHEMA.md](DATABASE-SCHEMA.md)** - Database reference
+
+---
+
+## ✨ Next Steps
+
+1. ✅ Customize the 12-word phrase
+2. ✅ Change styling in `styles.css`
+3. ✅ Add Discord webhook notifications (see API-EXAMPLES.md)
+4. ✅ Set up admin dashboard to view stats
+5. ✅ Add email notifications for winners
+
+---
+
+## 🎓 Learning Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [PostgreSQL Tutorial](https://www.postgresql.org/docs/current/tutorial.html)
+- [Vercel Deployment Docs](https://vercel.com/docs)
+
+---
+
+**Questions?** See the full docs in this project folder.
+
+**Ready?** Start with step 1 above! ⚡
 
 # Then open: http://localhost:8000
 ```

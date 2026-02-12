@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase Connection</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .log {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .error {
+            color: #f48771;
+        }
+        .success {
+            color: #6a9955;
+        }
+        .info {
+            color: #9cdcfe;
+        }
+        #output {
+            border: 1px solid #333;
+            padding: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+            background: #252526;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Supabase Connection Test</h1>
+    <button onclick="runTest()">Run Test</button>
+    <div id="output"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://fxfarkkatekivolrgvad.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_J0jwybaGEAxeyP3gzaYNvQ_fxD5Q3Om';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const div = document.createElement('div');
+            div.className = 'log ' + type;
+            div.textContent = '> ' + message;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        async function runTest() {
+            document.querySelector('button').disabled = true;
+            document.getElementById('output').innerHTML = '';
+
+            try {
+                log('Testing Supabase connection...', 'info');
+                log('URL: ' + SUPABASE_URL, 'info');
+                log('', 'info');
+
+                // Wait for Supabase library to load
+                let attempts = 0;
+                while (typeof window.supabase === 'undefined' && attempts < 10) {
+                    log('Waiting for Supabase library... (attempt ' + (attempts + 1) + ')', 'info');
+                    await new Promise(r => setTimeout(r, 100));
+                    attempts++;
+                }
+
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error('Supabase library failed to load');
+                }
+
+                log('✅ Supabase library loaded', 'success');
+                
+                // Create client
+                const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                log('✅ Supabase client created', 'success');
+
+                // Test query
+                log('Running test query...', 'info');
+                const { data, error, status } = await supabase
+                    .from('submissions')
+                    .select('*', { count: 'exact' })
+                    .limit(5);
+
+                if (error) {
+                    log('❌ Error: ' + error.message, 'error');
+                    log('Status: ' + error.status, 'error');
+                    log('Code: ' + error.code, 'error');
+                } else {
+                    log('✅ Query successful!', 'success');
+                    log('Status: ' + status, 'success');
+                    log('Records returned: ' + (data?.length || 0), 'success');
+                    
+                    if (data && data.length > 0) {
+                        log('Sample record:', 'info');
+                        log(JSON.stringify(data[0], null, 2), 'info');
+                    } else {
+                        log('(No records in database yet)', 'info');
+                    }
+                }
+
+                log('', 'info');
+                log('✅ Connection test complete', 'success');
+
+            } catch (error) {
+                log('❌ Test failed: ' + error.message, 'error');
+                log(error.stack, 'error');
+            } finally {
+                document.querySelector('button').disabled = false;
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Click "Run Test" to test Supabase connection.', 'info');
+        });
+    </script>
+</body>
+</html>
