@@ -290,11 +290,12 @@ async function loadSubmissions() {
             submissions.push(childSnapshot.val());
         });
         
-        // Reverse to show newest first
-        submissions.reverse();
-        
-        submissions.forEach(submission => {
-            const item = createSubmissionItem(submission);
+        // Show oldest first (rank #1, #2, etc.)
+        // submissions.reverse(); // Removed
+
+        submissions.forEach((submission, index) => {
+            const rank = index + 1;
+            const item = createSubmissionItem(submission, rank);
             submissionsList.appendChild(item);
         });
         
@@ -305,7 +306,8 @@ async function loadSubmissions() {
 }
 
 // Create a submission display item
-function createSubmissionItem(submission) {
+// Create a submission display item
+function createSubmissionItem(submission, rank) {
     const item = document.createElement('div');
     item.className = 'submission-item';
     
@@ -315,6 +317,7 @@ function createSubmissionItem(submission) {
     item.innerHTML = `
         <div class="submission-header">
             <div class="submission-username">
+                <span class="submission-rank">#${rank}</span>
                 🎮 ${escapeHtml(submission.discord)}
             </div>
             <div class="submission-status">✅ Verified</div>

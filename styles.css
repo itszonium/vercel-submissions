@@ -408,6 +408,17 @@ h2 {
     gap: 8px;
 }
 
+.submission-rank {
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-right: 8px;
+    background-color: var(--bg-primary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-size: 12px;
+}
+
 .submission-username {
     font-weight: 600;
     color: var(--primary-color);

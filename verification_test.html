@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="test-container">
+        <h1>Rank Display Verification</h1>
+        <div id="submissionsList" class="submissions-list"></div>
+    </div>
+
+    <!-- Mock standard app dependencies -->
+    <script>
+        // Mock DOM elements required by app.js so it doesn't error out immediately
+        const form = document.createElement('form'); form.id = 'phraseForm';
+        const wordsContainer = document.createElement('div'); wordsContainer.id = 'wordsContainer';
+        const discordUsername = document.createElement('input'); discordUsername.id = 'discordUsername';
+        const discordError = document.createElement('span'); discordError.id = 'discordError';
+        const validationMessage = document.createElement('div'); validationMessage.id = 'validationMessage';
+        const submitBtn = document.createElement('button'); submitBtn.id = 'submitBtn';
+        const themeToggle = document.createElement('button'); themeToggle.id = 'themeToggle';
+        // SubmissionsList is real in this file
+
+        // Mock document.getElementById to return our mocks if not found
+        const originalGetElementById = document.getElementById.bind(document);
+        document.getElementById = (id) => {
+            const el = originalGetElementById(id);
+            if (el) return el;
+            if (id === 'phraseForm') return form;
+            if (id === 'wordsContainer') return wordsContainer;
+            if (id === 'discordUsername') return discordUsername;
+            if (id === 'discordError') return discordError;
+            if (id === 'validationMessage') return validationMessage;
+            if (id === 'submitBtn') return submitBtn;
+            if (id === 'themeToggle') return themeToggle;
+            return null;
+        };
+
+        // Mock localStorage
+        const localStorageMock = {
+            getItem: () => null,
+            setItem: () => { }
+        };
+        Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+    </script>
+    <script src="app.js"></script>
+    <script>
+        // Manually trigger the rendering with test data
+        const testSubmissions = [
+            { discord: "UserOne#1234", phrase: "word1 word2 ...", timestamp: new Date(Date.now() - 10000000).toISOString() },
+            { discord: "UserTwo#5678", phrase: "word1 word2 ...", timestamp: new Date(Date.now() - 5000000).toISOString() },
+            { discord: "UserThree#9999", phrase: "word1 word2 ...", timestamp: new Date().toISOString() }
+        ];
+
+        // Ensure app.js functions are available
+        setTimeout(() => {
+            const list = document.getElementById('submissionsList');
+            if (typeof createSubmissionItem === 'function') {
+                testSubmissions.forEach((sub, index) => {
+                    const item = createSubmissionItem(sub, index + 1);
+                    list.appendChild(item);
+                });
+            } else {
+                list.innerHTML = "<div class='error'>Error: createSubmissionItem not found</div>";
+            }
+        }, 500);
+    </script>
+</body>
+
+</html>
